@@ -1,0 +1,106 @@
+
+version: '3.8'
+
+services:
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: slsa-mcp-server
+    ports:
+      - "8001:8001"
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=info
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8000
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - slsa-network
+
+  # Optional: Add a simple web dashboard (if you want to serve the tkinter dashboard via web)
+  # dashboard:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.dashboard
+  #   container_name: slsa-dashboard
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - MCP_SERVER_URL=http://mcp-server:8000
+  #   depends_on:
+  #     - mcp-server
+  #   restart: unless-stopped
+  #   networks:
+  #     - slsa-network
+
+  # Optional: Add n8n for workflow automation
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: slsa-n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-password}
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+    env_file:
+      - .env
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n_workflows:/home/node/.n8n/workflows
+      - ./watch_folder:/data/watch_folder
+    restart: unless-stopped
+    depends_on:
+      - mcp-server
+    networks:
+      - slsa-network
+
+  # Optional: Add Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: slsa-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    networks:
+      - slsa-network
+
+volumes:
+  n8n_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  slsa-network:
+    driver: bridge
+    name: slsa-network
+
+# Production deployment notes:
+# 1. Create .env file with production values
+# 2. Set up proper SSL/TLS termination (nginx, traefik, etc.)
+# 3. Configure persistent storage for production data
+# 4. Set up monitoring and logging (prometheus, grafana, etc.)
+# 5. Implement backup strategies for volumes
+# 6. Use secrets management for sensitive data
+# 7. Configure resource limits and health checks
+# 8. Set up CI/CD pipeline for automated deployments

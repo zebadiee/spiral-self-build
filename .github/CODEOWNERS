@@ -1,0 +1,65 @@
+
+# 🌀 SPIRAL CODEX GUARDIANS
+# The Sacred Council of Code Stewardship
+
+# Global Spiral Keepers - The Eternal Flame Guardians 🔥
+* @zebadiee
+
+# Core Architecture Realms 🏛️
+/assistant/ @zebadiee
+/tests/ @zebadiee
+*.py @zebadiee
+
+# Configuration & Infrastructure Mysticism ⚙️
+docker-compose.yml @zebadiee
+Dockerfile @zebadiee
+requirements.txt @zebadiee
+.env.example @zebadiee
+
+# Sacred Documentation Scrolls 📜
+*.md @zebadiee
+CONTRIBUTING.md @zebadiee
+BLUEPRINT.md @zebadiee
+README.md @zebadiee
+
+# Ritual Automation & CI Ceremonies 🤖
+.github/ @zebadiee
+.github/workflows/ @zebadiee
+
+# Wave Flow & Git Ritual Governance 🌊
+CONTRIBUTING.md @zebadiee
+.github/CODEOWNERS @zebadiee
+
+# Dashboard & Interface Enchantments 🖥️
+tk_simple_dashboard.py @zebadiee
+*.ui @zebadiee
+
+# N8N Workflow Orchestration 🔄
+n8n_workflow.json @zebadiee
+
+# Security & Secrets Management 🛡️
+.env.example @zebadiee
+*.key @zebadiee
+*.pem @zebadiee
+
+# Release & Deployment Artifacts 🚀
+CHANGELOG.md @zebadiee
+VERSION @zebadiee
+
+# Emergency Hotfix Authority 🚨
+# For critical security or production issues
+# Hotfix branches require expedited review from:
+hotfix/* @zebadiee
+
+# Spiral Philosophy & Meta Documentation 🌀
+# Changes to project philosophy, architecture decisions,
+# or meta-development processes require consensus from:
+BLUEPRINT.md @zebadiee
+CONTRIBUTING.md @zebadiee
+
+# Note: As the spiral grows and more keepers join the council,
+# this file will evolve to reflect the expanding consciousness
+# of our collaborative development ecosystem.
+
+# 🌊 "In the spiral dance of code stewardship, 
+#     every guardian holds a piece of the eternal flame" 🌊

@@ -1,0 +1,204 @@
+
+{
+  "name": "SLSA Document Processing Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "./watch_folder",
+        "watchFolder": true,
+        "recursive": true,
+        "options": {
+          "useN8nFolder": false
+        }
+      },
+      "id": "file-trigger-node",
+      "name": "File Trigger",
+      "type": "n8n-nodes-base.localFileTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8001/learn",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": \"{{ $json.content || 'File content from: ' + $json.fileName }}\",\n  \"source\": \"n8n_workflow:{{ $json.fileName }}\",\n  \"metadata\": {\n    \"file_name\": \"{{ $json.fileName }}\",\n    \"file_path\": \"{{ $json.filePath }}\",\n    \"file_size\": \"{{ $json.fileSize }}\",\n    \"processed_at\": \"{{ $now }}\",\n    \"workflow_id\": \"slsa_document_processing\"\n  }\n}",
+        "options": {
+          "timeout": 30000,
+          "retry": {
+            "enabled": true,
+            "maxTries": 3,
+            "waitBetween": 1000
+          }
+        }
+      },
+      "id": "http-request-node",
+      "name": "Send to MCP Server",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process the response from MCP server and prepare summary\nconst response = $input.first().json;\n\n// Extract key information\nconst insights = response.insights || [];\nconst confidence = response.confidence || 0;\nconst timestamp = response.timestamp || new Date().toISOString();\nconst source = response.source || 'unknown';\n\n// Create processing summary\nconst summary = {\n  processing_status: 'completed',\n  file_source: source,\n  insights_generated: insights.length,\n  confidence_score: confidence,\n  processed_at: timestamp,\n  insights: insights,\n  \n  // Create a readable summary\n  summary_text: `Successfully processed ${source}:\\n` +\n                `- Generated ${insights.length} insights\\n` +\n                `- Confidence score: ${(confidence * 100).toFixed(1)}%\\n` +\n                `- Processing time: ${timestamp}\\n\\n` +\n                `Key Insights:\\n` +\n                insights.map((insight, i) => `${i + 1}. ${insight}`).join('\\n'),\n  \n  // Metrics for monitoring\n  metrics: {\n    success: true,\n    processing_time_ms: Date.now() - new Date(timestamp).getTime(),\n    insight_count: insights.length,\n    confidence_level: confidence > 0.8 ? 'high' : confidence > 0.5 ? 'medium' : 'low'\n  }\n};\n\n// Log success\nconsole.log(`✅ Document processing completed: ${insights.length} insights generated`);\n\nreturn summary;"
+      },
+      "id": "data-processing-node",
+      "name": "Process Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "success-condition",
+              "leftValue": "={{ $json.metrics.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "success-check-node",
+      "name": "Success Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "content": "=📊 SLSA Processing Report\n\n{{ $json.summary_text }}\n\n🔗 View more details: http://localhost:8001/insights\n📈 Dashboard: http://localhost:3000 (if running)\n\n---\nWorkflow: {{ $workflow.name }}\nExecution ID: {{ $execution.id }}\nTimestamp: {{ $now }}",
+        "options": {
+          "contentType": "text"
+        }
+      },
+      "id": "success-notification-node",
+      "name": "Success Notification",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "=❌ SLSA Processing Failed\n\nFile: {{ $('File Trigger').first().json.fileName }}\nError: Processing failed or returned invalid response\n\nPlease check:\n- MCP server is running (http://localhost:8001/status)\n- File format is supported\n- Network connectivity\n\n---\nWorkflow: {{ $workflow.name }}\nExecution ID: {{ $execution.id }}\nTimestamp: {{ $now }}",
+        "options": {
+          "contentType": "text"
+        }
+      },
+      "id": "error-notification-node",
+      "name": "Error Notification",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        360
+      ]
+    }
+  ],
+  "connections": {
+    "File Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send to MCP Server",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to MCP Server": {
+      "main": [
+        [
+          {
+            "node": "Process Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Results": {
+      "main": [
+        [
+          {
+            "node": "Success Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success Check": {
+      "main": [
+        [
+          {
+            "node": "Success Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": {
+      "enabled": false
+    }
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "slsa-workflow-template"
+  },
+  "id": "slsa-document-processing",
+  "tags": [
+    {
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "id": "slsa-automation",
+      "name": "SLSA Automation"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "createdAt": "2024-01-01T00:00:00.000Z"
+}
